@@ -10,13 +10,36 @@ The current application exposes a simple in-memory users API plus basic root, he
 - Express 5
 - JSON request parsing with `express.json()`
 - In-memory data storage for demo users
+- Docker image based on `node:22-bookworm-slim`
+- Docker Compose service definition in `compose.yml`
+- Environment configuration through `.env`
 
 ## Requirements
 
 - Node.js 18 or newer
 - npm
+- Docker, when building and running the container image
+- Docker Compose, when using the Compose workflow
 
-## Getting Started
+## Environment Variables
+
+Create a local environment file from the committed example:
+
+```bash
+cp .example.env .env
+```
+
+The `.env` file is intentionally ignored by git. Commit changes to `.example.env` when the required environment variables change.
+
+| Variable | Default | Used by | Description |
+| --- | --- | --- | --- |
+| `CONTAINER_PORT` | `3355` | Node.js, Docker Compose | Port the Express app listens on inside the container. |
+| `MACHINE_PORT` | `3355` | Docker Compose | Port exposed on your host machine. |
+| `APP_VERSION` | `1.0.0` | Node.js | Version returned by `GET /version`. |
+
+## Run Locally With Node.js
+
+Use these commands when you want to run the app directly without building a Docker image.
 
 Install dependencies:
 
@@ -24,13 +47,98 @@ Install dependencies:
 npm install
 ```
 
-Run the application:
+Run with the variables from `.env`:
+
+```bash
+set -a
+source .env
+set +a
+node index.js
+```
+
+If you do not need the `.env` values, you can run the app with built-in defaults:
 
 ```bash
 node index.js
 ```
 
 The server starts on:
+
+```text
+http://localhost:3355
+```
+
+If you change `MACHINE_PORT` or `CONTAINER_PORT`, use the matching port in your browser and API requests.
+
+## Run With Docker Compose
+
+Docker Compose is the easiest container workflow for this project because it reads `.env`, builds the image, maps ports, and starts the service with one command.
+
+Start the app and rebuild the image when needed:
+
+```bash
+docker compose up --build
+```
+
+Start the app in the background:
+
+```bash
+docker compose up -d --build
+```
+
+View logs:
+
+```bash
+docker compose logs -f app
+```
+
+Stop and remove the Compose container and network:
+
+```bash
+docker compose down
+```
+
+The Compose service:
+
+- Builds from the local `Dockerfile`.
+- Tags the image as `ahmadsamehh/prodtnodeapp:latest`.
+- Names the container `node-express-app`.
+- Maps `${MACHINE_PORT}` on the host to `${CONTAINER_PORT}` in the container.
+- Loads runtime variables from `.env`.
+- Sets `NODE_ENV=production`.
+- Uses `restart: always`.
+
+## Build And Run With Docker
+
+Use these commands when you want to build and run the image manually without Docker Compose.
+
+The examples below use the default `3355:3355` port mapping. If you change `.env`, update the `-p host:container` value to match.
+
+Build the Docker image:
+
+```bash
+docker build -t ahmadsamehh/prodtnodeapp:latest .
+```
+
+Run the container:
+
+```bash
+docker run --rm --env-file .env -p 3355:3355 ahmadsamehh/prodtnodeapp:latest
+```
+
+Run the container in the background:
+
+```bash
+docker run -d --name node-express-app --env-file .env -p 3355:3355 ahmadsamehh/prodtnodeapp:latest
+```
+
+Stop the background container:
+
+```bash
+docker stop node-express-app
+```
+
+The app is available at:
 
 ```text
 http://localhost:3355
@@ -79,18 +187,26 @@ curl -X DELETE http://localhost:3355/deleteusers
 
 ```text
 .
+├── .dockerignore     # Files excluded from the Docker build context
+├── .example.env      # Template for local environment variables
+├── .gitignore        # Files excluded from git
+├── Dockerfile        # Container image definition
+├── compose.yml       # Docker Compose service definition
 ├── index.js          # Express application entry point
 ├── package.json      # npm metadata and dependencies
-├── package-lock.json # Locked dependency versions
+├── package-lock.json # Locked dependency versions for local installs
 └── README.md         # Project documentation
 ```
 
 ## Development Notes
 
-- The server port is currently hard-coded to `3355`.
+- The default server port is `3355`, and the server can read `CONTAINER_PORT` or `PORT` from the environment.
 - User data is stored in memory, so it resets every time the server restarts.
 - There is no automated test suite yet.
-- There are no Docker files in the repository yet. Add Docker usage instructions here when Docker support is introduced.
+- The Docker image installs dependencies inside the image and starts the app with `node index.js`.
+- The Docker build copies `package.json` and `package-lock.json` first so dependency installation can be cached.
+- The `.dockerignore` file excludes local dependencies, logs, environment files, README files, git metadata, Compose files, and Docker metadata from the build context.
+- Do not commit `.env`; commit `.example.env` when environment variable names or defaults change.
 
 ## Documentation Policy
 

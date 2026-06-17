@@ -1,5 +1,12 @@
 FROM node:22-bookworm-slim
+
 WORKDIR /app
-COPY package.json index.js ./
-RUN npm install
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY . .
+
+EXPOSE 3355
+
 CMD ["node", "index.js"]

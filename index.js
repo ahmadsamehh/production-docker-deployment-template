@@ -1,7 +1,8 @@
 const express = require("express");
 
 const app = express();
-const PORT = 3355;
+const PORT = process.env.CONTAINER_PORT || process.env.PORT || 3355;
+const APP_VERSION = process.env.APP_VERSION || "1.0.0";
 
 
 let users = [
@@ -19,7 +20,7 @@ app.get("/health", (req, res) => {
 });
 
 app.get("/version", (req, res) => {
-  res.send("Version 3.0");
+  res.send(`Version ${APP_VERSION}`);
 });
 
 app.post("/users", (req, res) => {

@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    image: ahmadsamehh/prodtnodeapp:latest
+    container_name: node-express-app
+    ports:
+      - ${MACHINE_PORT}:${CONTAINER_PORT}
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    restart: always
